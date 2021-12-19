@@ -1,8 +1,8 @@
 wordnet
+stopwords
+word_tokenize
+punkt
 pros_cons
 reuters
 corpus
 tokenize
-stopwords
-word_tokenize
-punkt

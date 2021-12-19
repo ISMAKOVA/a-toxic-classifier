@@ -6,10 +6,11 @@ import forVK
 import vect_svc
 import gunicorn
 from waitress import serve
+import pictures
 
 app = Flask(__name__)
 api = Api(app)
-
+import numpy as np
 
 @app.route('/toxicity_py/api/users/<string:id>', methods=['GET'])
 def get_users(id):
@@ -180,18 +181,53 @@ def set_post_toxicity(posts):
     return clear_posts
 
 
-# class Post(Resource):
-#     def get(self, post_id):
-#         try:
-#             post = forVK.get_post(post_id)
-#             marked_post = set_post_toxicity([post])
-#             owner = forVK.get_group(str(post['owner_id']).replace('-', ''))[0]
-#             return {'post': marked_post, 'owner': owner}
-#         except:
-#             abort(500, 'Something goes wrong')
-#
-#
-# api.add_resource(Post, "/toxicity_py/api/post/<string:post_id>")
+class Post(Resource):
+    def get(self, post_id):
+        try:
+            post = forVK.get_post(post_id)
+            marked_post = set_post_toxicity([post])
+            owner = forVK.get_group(str(post['owner_id']).replace('-', ''))[0]
+            return {'post': marked_post, 'owner': owner}
+        except:
+            abort(500, 'Something goes wrong')
+
+
+@app.route('/toxicity_py/api/picture', methods=['POST', 'GET'])
+def get_picture():
+    if request.method == 'POST':
+        file = request.files['image'].read()  ## byte file
+        print(file)
+        npimg = np.fromstring(file, np.uint8)
+        untoxic, toxic = pictures.classify_pic(npimg)
+        result = []
+        result.append({
+                'untoxic': str(untoxic),
+                'toxic': str(toxic)
+            })
+        return jsonify(result)
+    else:
+        abort(400)
+
+@app.route('/toxicity_py/api/pictures', methods=['POST', 'GET'])
+def get_pictures():
+    if request.method == 'POST':
+        file = request.files  ## byte file
+        result = []
+        i = 0
+        for f in file:
+            i += 1
+            npimg = np.fromstring(f,  np.uint8)
+            untoxic, toxic = pictures.classify_pic(npimg)
+            result.append({i: {
+                'untoxic': str(untoxic),
+                'toxic': str(toxic)
+            }})
+        return jsonify(result)
+    else:
+        abort(400)
+
+api.add_resource(Post, "/toxicity_py/api/post/<string:post_id>")
+
 
 if __name__ == "__main__":
     serve(app, host="0.0.0.0", port=8080)
